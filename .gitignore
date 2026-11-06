@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.sqlite*
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+node_modules/
+.DS_Store
+coverage.xml
+.coverage
+artifacts/
+backups/
+
+# editors, logs, archives
+.vscode/
+.idea/
+*.log
+*.zip

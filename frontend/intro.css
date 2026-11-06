@@ -1,0 +1,57 @@
+/* Короткая Matrix-заставка (~0,5 с): показывается только при загрузке страницы, остальной интерфейс не затрагивает. */
+.matrix-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: #000;
+  opacity: 1;
+  cursor: pointer;
+  transition: opacity .2s ease; /* должно совпадать с FADE_MS в intro.js */
+  /* страховка: если intro.js не загрузился, заставка сама исчезнет и не закроет сайт */
+  animation: mi-failsafe .01s linear 2s forwards;
+}
+.matrix-intro.is-leaving { opacity: 0; pointer-events: none; }
+
+/* дождь приглушён, чтобы заставка не била в глаза */
+.matrix-intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; }
+
+.mi-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100% - 40px));
+  padding: 26px 30px 24px;
+  background: rgba(0, 0, 0, .9);
+  border: 1px solid rgba(0, 255, 65, .35);
+  border-radius: 6px;
+  font-family: var(--mono, Menlo, Consolas, monospace);
+}
+.mi-title {
+  font-size: clamp(26px, 6vw, 38px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: .08em;
+  color: #00ff41;
+}
+.mi-title small {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .36em;
+  color: #b9ffcb;
+  opacity: .8;
+}
+.mi-text {
+  margin: 18px 0 0;
+  font-size: clamp(15px, 3vw, 18px);
+  line-height: 1.5;
+  color: #e6ffec;
+}
+
+@keyframes mi-failsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .matrix-intro { display: none; }
+}

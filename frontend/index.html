@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0d0c">
+  <meta name="description" content="SOC AI Triage — первичный анализ событий безопасности с проверяемыми признаками и решением аналитика.">
+  <title>SOC AI Triage — Центр безопасности</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/cyber.css">
+  <link rel="stylesheet" href="/static/intro.css">
+  <script src="/static/intro.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div id="matrix-intro" class="matrix-intro" aria-hidden="true">
+    <canvas></canvas>
+    <div class="mi-panel">
+      <div class="mi-title">SOC AI TRIAGE<small>SECURITY CONSOLE</small></div>
+      <p class="mi-text">Wake up, Analyst...</p>
+    </div>
+  </div>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h5l3-8 4 16 3-8h5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3v.1"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="9" r="5"/><path d="m12 13 8 8m-5-5 3-3m0 6 3-3"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.1M7 17.5h.1m4-11h6m-6 11h6"/></symbol>
+  </defs></svg>
+
+  <aside class="sidebar">
+    <a class="brand" href="#dashboard" aria-label="SOC AI Triage — главная">
+      <span class="brand-mark"><svg class="icon"><use href="#i-shield"/></svg></span>
+      <span>SOC<span class="brand-ai">AI</span><small>SECURITY CONSOLE</small></span>
+    </a>
+    <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+    <nav aria-label="Основная навигация" class="main-nav">
+      <a href="#dashboard" data-view="dashboard" class="nav-link active"><svg class="icon"><use href="#i-grid"/></svg><span>Dashboard</span></a>
+      <a href="#alerts" data-view="alerts" class="nav-link"><svg class="icon"><use href="#i-pulse"/></svg><span>Alerts</span><span id="nav-count" class="nav-count">0</span></a>
+      <a href="#history" data-view="history" class="nav-link"><svg class="icon"><use href="#i-clock"/></svg><span>History</span></a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="engine-card"><span class="status-dot"></span><strong>Rule Engine</strong><span>6 активных правил</span><small>Playbook v2.1</small></div>
+      <button type="button" id="access-button" class="profile-button"><span class="avatar">L1</span><span><strong>SOC Analyst</strong><small>Локальное пространство</small></span><svg class="icon"><use href="#i-key"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="app-shell">
+    <header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong id="breadcrumb">Dashboard</strong></div><div class="topbar-right"><span class="environment">LOCAL MVP</span><span id="connection" class="connection"><span class="status-dot"></span>Подключение…</span><button type="button" id="access-button-mobile" class="button icon-button mobile-access" aria-label="Токен доступа"><svg class="icon"><use href="#i-key"/></svg></button></div></header>
+    <main id="main" class="main-content">
+      <div id="offline-banner" class="notice danger" role="alert" hidden>Нет соединения с backend. Проверьте сервер и нажмите «Обновить».</div>
+      <div id="auth-banner" class="notice info" role="status" hidden>Доступ к событиям защищен токеном аналитика. <button type="button" id="auth-open" class="button subtle">Ввести токен</button></div>
+      <section class="page-heading flex flex-wrap items-start justify-between gap-4">
+        <div class="heading-copy"><div class="eyebrow"><span class="mini-line"></span> SECURITY OPERATIONS CENTER</div><h1 id="page-title">Обзор безопасности</h1><p id="page-subtitle">Каждый сигнал — в контексте. Каждое решение — за вами.</p></div>
+        <div class="cyber-emblem" aria-hidden="true"><svg viewBox="0 0 220 150" fill="none"><path class="emblem-frame" d="M42 24h-18v26m154-26h18v26M24 100v26h18m136 0h18v-26M0 75h47m126 0h47M110 0v21m0 108v21"/><path class="emblem-grid" d="M59 39h102v72H59zM40 57h140M40 93h140M76 20v110m68-110v110"/><path class="emblem-outer" d="m110 22 39 14v35c0 29-39 52-39 52S71 100 71 71V36l39-14Z"/><path class="emblem-shield" d="m110 36 27 10v25c0 18-27 36-27 36S83 89 83 71V46l27-10Z"/><path class="emblem-check" d="m98 69 9 9 17-21"/><circle cx="24" cy="75" r="3"/><circle cx="196" cy="75" r="3"/><circle cx="110" cy="12" r="3"/><circle cx="110" cy="138" r="3"/></svg></div>
+        <button type="button" class="button primary" id="add-log"><svg class="icon"><use href="#i-plus"/></svg>Добавить лог</button>
+      </section>
+
+      <section id="stats-grid" class="stats-grid grid grid-cols-2 gap-4" aria-label="Статистика">
+        <article class="stat-card"><div class="stat-top"><span>Всего событий</span><svg class="icon"><use href="#i-pulse"/></svg></div><div id="stat-total" class="stat-number">—</div><small>В очереди мониторинга</small></article>
+        <article class="stat-card risk"><div class="stat-top"><span>Высокий риск</span><svg class="icon"><use href="#i-alert"/></svg></div><div id="stat-high" class="stat-number">—</div><small>High и Critical по последнему анализу</small></article>
+        <article class="stat-card pending"><div class="stat-top"><span>Ожидают разбора</span><svg class="icon"><use href="#i-clock"/></svg></div><div id="stat-pending" class="stat-number">—</div><small>Новые, активные и с ошибкой</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Выполнено анализов</span><svg class="icon"><use href="#i-spark"/></svg></div><div id="stat-analyses" class="stat-number">—</div><small>Все версии сохранены</small></article>
+      </section>
+
+      <p id="ingestion-info" class="ingestion-info">Ожидание данных о поступлении событий</p>
+      <div id="dashboard-content" class="dashboard-columns">
+        <section class="panel event-panel" aria-labelledby="queue-title">
+          <div class="panel-heading"><div><span class="panel-code" aria-hidden="true">01 / EVENT QUEUE</span><h2 id="queue-title">Последние события <span id="queue-count" class="count-pill">0</span></h2><p>Очередь первичного разбора · автообновление каждые 3 с</p></div><button type="button" id="refresh" class="button icon-button" aria-label="Обновить события" title="Обновить"><svg class="icon"><use href="#i-refresh"/></svg></button></div>
+          <div id="filters" class="filter-row"><label class="search-field"><svg class="icon"><use href="#i-search"/></svg><input id="search" type="search" maxlength="120" placeholder="Поиск по IP или событию" aria-label="Поиск по IP или событию"></label><select id="status-filter" aria-label="Фильтр статуса"><option value="">Все статусы</option><option value="new">Новые</option><option value="processing">В обработке</option><option value="analyzed">Проанализированы</option><option value="confirmed">Подтверждены</option><option value="false_positive">Ложные срабатывания</option><option value="error">С ошибкой</option></select></div>
+          <div class="table-labels"><span>СОБЫТИЕ / ИСТОЧНИК</span><span>КРИТИЧНОСТЬ</span><span>СТАТУС</span><span></span></div>
+          <div id="alert-list" class="alert-list"><p class="empty-state">Загрузка событий…</p></div>
+          <div class="panel-footer"><span id="list-caption">Данные из локального хранилища</span><a href="#alerts" id="all-alerts">Все события <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+        </section>
+
+        <aside id="insight-column" class="insight-column">
+          <section class="panel copilot-panel"><div class="copilot-orb"><svg class="icon"><use href="#i-shield"/></svg><span class="orb-ring"></span></div><span class="eyebrow">КОНТУР АНАЛИЗА</span><h2>От сигнала<br>к обоснованному решению</h2><p>Правила находят признаки.<br>AI объясняет контекст.<br>Вы принимаете решение.</p><div class="flow-step"><span>01</span><div><strong>Проверяемые признаки</strong><small>Доказательства со ссылками на лог</small></div><svg class="icon"><use href="#i-check"/></svg></div><div class="flow-step"><span>02</span><div><strong>Контекст и рекомендации</strong><small>LLM + версионируемый Playbook</small></div></div><div class="flow-step"><span>03</span><div><strong>Контроль аналитика</strong><small>Полная история решений</small></div></div><a class="button subtle full-width" href="#alerts">Перейти к разбору <svg class="icon"><use href="#i-arrow"/></svg></a></section>
+          <section class="mode-note"><svg class="icon"><use href="#i-server"/></svg><div><strong id="mode-title">Проверка режима…</strong><p id="mode-description">Состояние LLM появится после подключения.</p></div></section>
+          <p class="synthetic-note">Демо-события синтетические.<br>Автоматическое реагирование отключено.</p>
+        </aside>
+      </div>
+
+      <section id="history-content" class="panel" hidden><div class="panel-heading"><div><span class="panel-code" aria-hidden="true">02 / ANALYSIS ARCHIVE</span><h2>История разборов</h2><p>Каждый анализ и каждое решение сохраняются отдельно</p></div><button type="button" id="refresh-history" class="button icon-button" aria-label="Обновить историю"><svg class="icon"><use href="#i-refresh"/></svg></button></div><div id="history-list"></div></section>
+      <footer class="app-footer"><span><svg class="icon"><use href="#i-shield"/></svg>SOC AI Triage</span><span>AI помогает. Аналитик решает.</span><span id="updated-at">Локальное хранилище · SQLite</span></footer>
+    </main>
+  </div>
+
+  <dialog id="detail-dialog" class="detail-dialog"><div class="dialog-heading"><div><span class="eyebrow">РАЗБОР СОБЫТИЯ</span><h2 id="detail-title">Событие</h2></div><button type="button" class="button icon-button" data-close="detail-dialog" aria-label="Закрыть детали"><svg class="icon"><use href="#i-close"/></svg></button></div><div id="detail-body"></div></dialog>
+
+  <dialog id="log-dialog" class="form-dialog"><form id="log-form"><div class="dialog-heading"><div><span class="eyebrow">НОВОЕ СОБЫТИЕ</span><h2>Добавить лог</h2></div><button type="button" class="button icon-button" data-close="log-dialog" aria-label="Закрыть форму"><svg class="icon"><use href="#i-close"/></svg></button></div><p class="form-intro">Добавьте JSON, строки key=value или текст. Анализ начнется по вашему запросу.</p><label class="field">Тип события<input name="event_type" required maxlength="80" placeholder="Например, подозрительный вход"></label><div class="form-grid"><label class="field">IP источника<input name="source_ip" required maxlength="45" placeholder="203.0.113.10" spellcheck="false"></label><label class="field">Время события (локальное)<input name="timestamp" type="datetime-local" required></label></div><label class="field">Исходный лог<textarea name="raw_data" id="raw-input" rows="8" required placeholder='{"type":"failed_login","user":"demo","count":10,"window_seconds":60,"at":"2026-11-06T04:00:00Z"}' spellcheck="false"></textarea></label><div class="input-hint"><span>Распознаваемые секреты будут замаскированы</span><span id="char-count">0 / 2000</span></div><p id="log-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button subtle" data-close="log-dialog">Отмена</button><button type="submit" id="save-log" class="button primary" disabled>Добавить событие</button></div></form></dialog>
+
+  <dialog id="access-dialog" class="form-dialog"><form id="access-form"><div class="dialog-heading"><div><span class="eyebrow">ДОСТУП К API</span><h2>Токен аналитика</h2></div><button type="button" class="button icon-button" data-close="access-dialog" aria-label="Закрыть настройки доступа"><svg class="icon"><use href="#i-close"/></svg></button></div><p class="form-intro">Нужен, если на сервере задан API_TOKEN. Токен хранится только в памяти этой вкладки.</p><label class="field">Токен<input type="password" name="token" autocomplete="off" placeholder="Введите API_TOKEN"></label><div class="dialog-actions"><button type="button" id="clear-token" class="button subtle">Удалить токен</button><button type="submit" class="button primary">Применить</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

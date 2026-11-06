@@ -1,0 +1,13 @@
+{
+  "name": "soc-ai-triage-styles",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify",
+    "test:ui": "node --test tests/test_frontend.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.1.0"
+  }
+}
