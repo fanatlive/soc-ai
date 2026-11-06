@@ -16,10 +16,10 @@ from .schemas import Evidence, LLMResult, RuleFinding, Severity, ShortText
 from .security import redact, scrub_tree
 
 ERROR_MESSAGES = {
-    "not_configured": "LLM не настроен. Использован резервный анализ по правилам.",
+    "not_configured": "LLM не настроен: укажите LLM_API_KEY и LLM_MODEL в .env и перезапустите сервер. Использован резервный анализ по правилам.",
     "credentials_rejected": "Провайдер отклонил API-ключ. Проверьте ключ и перезапустите сервер.",
     "permission_denied": "Провайдер запретил доступ. Проверьте права ключа, регион и доступность модели.",
-    "configuration_error": "Провайдер не принял запрос. Проверьте модель и OpenAI-совместимый URL.",
+    "configuration_error": "Провайдер не принял запрос. Проверьте ключ, модель и OpenAI-совместимый URL.",
     "quota_or_rate_limit": "Провайдер ограничил частоту запросов или квоту. Временно используются правила.",
     "provider_busy": "Достигнут лимит одновременных обращений к LLM. Использованы правила.",
     "timeout": "LLM превысил таймаут. Использован резервный анализ по правилам.",
@@ -167,32 +167,39 @@ async def analyze_event(*, raw_data: str, source_ip: str, event_type: str,
             return fallback("provider_busy")
         if time.monotonic() < runtime.cooldown_until:
             return fallback("quota_or_rate_limit")
-        async with asyncio.timeout(settings.llm_timeout_seconds):
-            async with httpx.AsyncClient(timeout=httpx.Timeout(settings.llm_timeout_seconds, connect=min(5, settings.llm_timeout_seconds)),
-                                         follow_redirects=False, transport=transport) as client:
-                async with client.stream("POST", settings.llm_base_url.rstrip("/") + "/chat/completions",
-                                         headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                                         json={"model": settings.llm_model, "messages": [
-                                             {"role": "system", "content": SYSTEM_PROMPT},
-                                             {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-                                         ], "response_format": {"type": "json_object"}, "max_tokens": 4096}) as response:
-                    if response.status_code >= 300:
-                        status = response.status_code
-                        code = "credentials_rejected" if status == 401 else "permission_denied" if status == 403 else "quota_or_rate_limit" if status == 429 else "configuration_error" if status < 500 else "provider_error"
-                        if status == 429:
-                            try:
-                                delay = min(60, max(1, float(response.headers.get("retry-after", "10"))))
-                            except ValueError:
-                                delay = 10
-                            runtime.cooldown_until = time.monotonic() + delay
-                        return fallback(code)
-                    chunks, size = [], 0
-                    async for chunk in response.aiter_bytes():
-                        size += len(chunk)
-                        if size > 65536:
-                            raise InvalidLLMResponse(code="response_too_large")
-                        chunks.append(chunk)
-                    envelope = json.loads(b"".join(chunks))
+        models = (settings.llm_model, *settings.llm_fallback_models)
+        used_model = settings.llm_model
+        for index, model_name in enumerate(models):
+            async with asyncio.timeout(settings.llm_timeout_seconds):
+                async with httpx.AsyncClient(timeout=httpx.Timeout(settings.llm_timeout_seconds, connect=min(5, settings.llm_timeout_seconds)),
+                                             follow_redirects=False, transport=transport) as client:
+                    async with client.stream("POST", settings.llm_base_url.rstrip("/") + "/chat/completions",
+                                             headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+                                             json={"model": model_name, "messages": [
+                                                 {"role": "system", "content": SYSTEM_PROMPT},
+                                                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+                                             ], "response_format": {"type": "json_object"}, "max_tokens": 4096}) as response:
+                        if response.status_code >= 300:
+                            status = response.status_code
+                            code = "credentials_rejected" if status == 401 else "permission_denied" if status == 403 else "quota_or_rate_limit" if status == 429 else "configuration_error" if status < 500 else "provider_error"
+                            if status == 429:
+                                try:
+                                    delay = min(60, max(1, float(response.headers.get("retry-after", "10"))))
+                                except ValueError:
+                                    delay = 10
+                                runtime.cooldown_until = time.monotonic() + delay
+                            if code == "provider_error" and index < len(models) - 1:
+                                continue  # модель перегружена (5xx) — пробуем резервную
+                            return fallback(code)
+                        chunks, size = [], 0
+                        async for chunk in response.aiter_bytes():
+                            size += len(chunk)
+                            if size > 65536:
+                                raise InvalidLLMResponse(code="response_too_large")
+                            chunks.append(chunk)
+                        envelope = json.loads(b"".join(chunks))
+            used_model = model_name
+            break
         choice = envelope["choices"][0]
         if choice.get("finish_reason") == "length":
             raise InvalidLLMResponse(code="truncated_response")
@@ -216,7 +223,7 @@ async def analyze_event(*, raw_data: str, source_ip: str, event_type: str,
             ],
         }, secrets))
         runtime.last_error_code, runtime.last_success_at = None, utcnow()
-        return ServiceResult(output, "hybrid" if findings else "llm", settings.llm_model[:150])
+        return ServiceResult(output, "hybrid" if findings else "llm", used_model[:150])
     except (httpx.TimeoutException, TimeoutError):
         return fallback("timeout")
     except (httpx.HTTPError, OSError):

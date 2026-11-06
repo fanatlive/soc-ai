@@ -315,3 +315,44 @@ def test_migration_keeps_history_and_redacts_old_credentials(settings):
         with client.app.state.session_factory() as db:
             assert json.loads(db.get(Alert, ids[0]).raw_data)["password"] == "[REDACTED]"
             assert list(db.scalars(select(SchemaMigration.version).order_by(SchemaMigration.version))) == [1, 2, 3]
+
+
+def run_with_models(statuses, fallbacks=("backup-model",)):
+    """statuses: HTTP-коды по порядку обращений; 200 — валидный ответ провайдера."""
+    models = []
+    def handler(request):
+        models.append(json.loads(request.content)["model"])
+        status = statuses[min(len(models), len(statuses)) - 1]
+        if status != 200:
+            return httpx.Response(status, json={"error": {"code": status}})
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(provider())}}]})
+    result = asyncio.run(analyze_event(raw_data="synthetic", source_ip="192.0.2.10", event_type="test", findings=[],
+        settings=Settings(llm_api_key="fake-key", llm_model="main-model", llm_fallback_models=fallbacks),
+        runtime=ProviderRuntime(4), transport=httpx.MockTransport(handler)))
+    return result, models
+
+
+def test_overloaded_model_falls_back_to_backup_model():
+    result, models = run_with_models([503, 200])
+    assert models == ["main-model", "backup-model"]
+    assert result.mode == "llm" and result.model_name == "backup-model"
+
+
+def test_backup_model_is_not_used_for_client_errors_or_when_main_works():
+    result, models = run_with_models([401, 200])  # ошибка ключа: резервная модель не поможет
+    assert models == ["main-model"] and result.mode == "rules_only" and result.provider_error_code == "credentials_rejected"
+    result, models = run_with_models([200])
+    assert models == ["main-model"] and result.model_name == "main-model"
+
+
+def test_all_models_overloaded_keeps_rules_only_fallback():
+    result, models = run_with_models([503, 503])
+    assert models == ["main-model", "backup-model"]
+    assert result.mode == "rules_only" and result.provider_error_code == "provider_error"
+
+
+def test_fallback_models_are_validated():
+    with pytest.raises(ValueError):
+        Settings(llm_fallback_models=("a", "b", "c"))
+    with pytest.raises(ValueError):
+        Settings(llm_timeout_seconds=100, llm_fallback_models=("a", "b"))

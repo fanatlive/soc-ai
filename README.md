@@ -92,6 +92,60 @@ Copy-Item .env.example .env
 
 Откройте **http://127.0.0.1:8000** — при первом старте создадутся пять синтетических демо-событий. Спецификация API: `/openapi.json`.
 
+## 🐧 Развёртывание на Linux (Arch)
+
+```bash
+sudo pacman -S --needed python git            # Python в Arch новее 3.11, venv уже входит в пакет
+git clone https://github.com/fanatlive/soc-ai.git && cd soc-ai
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env && nano .env
+```
+
+В `.env` вставьте ключ. Если открывать сайт **с другого компьютера**, нужны ещё три строки — иначе сервер ответит `400` (чужой Host), `401` (нет токена) или `403` (чужой Origin):
+
+```env
+LLM_API_KEY=ваш_ключ
+API_TOKEN=сгенерируйте: openssl rand -hex 24
+ALLOWED_HOSTS=IP_СЕРВЕРА,localhost,127.0.0.1
+ALLOWED_ORIGINS=http://IP_СЕРВЕРА:8000
+```
+
+```bash
+python -m tools.check_llm                                           # проверка ИИ с этого сервера: ключ, модель, сеть, регион
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000       # запуск
+sudo ufw allow 8000/tcp                                             # если включён firewall (или правило nftables/iptables)
+```
+
+Откройте `http://IP_СЕРВЕРА:8000`, нажмите значок 🔑 в левом нижнем углу и введите `API_TOKEN`. Сервер должен иметь выход в интернет к хосту LLM-провайдера.
+
+<details>
+<summary>Автозапуск через systemd</summary>
+
+Файл `/etc/systemd/system/soc-ai.service` (проект лежит в `/opt/soc-ai`, venv создан там же):
+
+```ini
+[Unit]
+Description=SOC AI Triage
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/soc-ai
+ExecStart=/opt/soc-ai/.venv/bin/python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now soc-ai
+journalctl -u soc-ai -f          # логи
+```
+</details>
+
+> После любого изменения `.env` сервер нужно перезапустить. Для публичного доступа поставьте перед сервисом nginx с TLS: токен по обычному HTTP передаётся открытым текстом.
+
 ## 🔌 Подключение LLM
 
 Заполните три переменные в `.env` и **перезапустите сервер**:
@@ -99,17 +153,20 @@ Copy-Item .env.example .env
 ```env
 LLM_API_KEY=ваш_ключ
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai   # или https://api.openai.com/v1
-LLM_MODEL=идентификатор_модели_вашего_провайдера
+LLM_MODEL=gemini-3.5-flash                          # обязательно: без модели LLM считается ненастроенным
+LLM_FALLBACK_MODELS=gemini-3.1-flash-lite           # необязательно: запасная модель на случай перегрузки (HTTP 5xx)
 ```
+
+В `.env.example` уже прописаны рабочие значения для Gemini — достаточно вставить ключ.
 
 Подойдёт любой провайдер с контрактом `POST {LLM_BASE_URL}/chat/completions` и `response_format=json_object` (OpenAI, Gemini через OpenAI-совместимый endpoint и т. п.). Состояние провайдера видно в `GET /api/health` → `provider.state`: `not_configured` · `not_checked` · `ready` · `degraded`.
 
-> 💡 Если провайдер перегружен (HTTP 503) или отвечает ошибкой, приложение не падает, а сохраняет разбор по правилам — с понятной причиной в интерфейсе. Модель можно сменить в `LLM_MODEL`.
+> 💡 Если провайдер перегружен (HTTP 503) или отвечает ошибкой, приложение не падает, а сохраняет разбор по правилам — с понятной причиной в интерфейсе. Если основная модель перегружена, сервер автоматически пробует модели из `LLM_FALLBACK_MODELS`.
 
 ## 🧪 Проверка и нагрузка
 
 ```bash
-python -m pytest -q            # 116 тестов backend
+python -m pytest -q            # 120 тестов backend
 npm install && npm run test:ui # 16 DOM-тестов интерфейса (jsdom)
 ```
 
@@ -118,6 +175,7 @@ npm install && npm run test:ui # 16 DOM-тестов интерфейса (jsdom
 ```bash
 python -m tools.generate_events --rate 25 --seconds 10            # приём логов
 python -m tools.generate_events --rate 3 --seconds 8 --analyze    # + анализ (вызывает LLM)
+python -m tools.check_llm                                         # диагностика подключения к LLM
 ```
 
 ## 🔐 Безопасность
